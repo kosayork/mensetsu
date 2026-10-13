@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#245b4b">
+  <meta name="description" content="専修大学ネットワーク情報学部の総合型選抜に向けた面接練習ツール。想定質問を確認し、自分の言葉で答える練習をしよう。">
+  <title>専修大学 面接対策</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./css/styles.css">
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#questions">質問一覧へ移動</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./" aria-label="専修大学 面接対策 ホーム">
+        <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 6v14M3 4.5c3-1 6-.5 9 1.5 3-2 6-2.5 9-1.5v14c-3-1-6-.5-9 1.5-3-2-6-2.5-9-1.5z"/></svg></span>
+        <span>専修大学 <strong>面接対策</strong><small>ネットワーク情報学部 / 総合型選抜</small></span>
+      </a>
+      <span class="sample-badge"><span></span>ダミーデータ版</span>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">一問ずつ、あなたのペースで。</p>
+        <h1 id="hero-title">自分の言葉で、<br>伝えられる自信を。</h1>
+        <p class="hero-description">想定質問を知り、声に出して練習する。<br>あなたらしい答えを、少しずつ育てていこう。</p>
+        <button id="start-practice" class="primary-button" disabled>今日の練習をはじめる <span aria-hidden="true">↗</span></button>
+        <p class="hero-meta"><span id="hero-category-count">8</span>カテゴリ <span class="meta-dot">·</span> <span id="hero-question-count">50</span>問の想定質問</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 390 290" fill="none">
+          <circle cx="208" cy="143" r="116" fill="#dce9df"/>
+          <circle cx="208" cy="143" r="91" stroke="#c5d8ca" stroke-dasharray="3 7"/>
+          <g transform="rotate(-8 150 150)"><rect x="77" y="83" width="144" height="151" rx="13" fill="#cadbd0"/><rect x="69" y="75" width="144" height="151" rx="13" fill="#fff" stroke="#c8d9ce"/><rect x="91" y="98" width="32" height="23" rx="6" fill="#e7efe8"/><path d="M100 110l4 4 9-9" stroke="#427b62" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M92 143h98M92 159h79M92 175h90M92 199h51" stroke="#dce5de" stroke-width="7" stroke-linecap="round"/></g>
+          <g transform="rotate(6 250 115)"><path d="M199 60h110a14 14 0 0114 14v62a14 14 0 01-14 14h-64l-25 20 2-20h-23a14 14 0 01-14-14V74a14 14 0 0114-14z" fill="#245b4b"/><circle cx="218" cy="105" r="5" fill="#d7e8dd"/><circle cx="253" cy="105" r="5" fill="#d7e8dd"/><circle cx="288" cy="105" r="5" fill="#d7e8dd"/></g>
+          <circle cx="285" cy="218" r="25" fill="#fafcf8" stroke="#c5d8ca"/><path d="M274 218l7 7 15-16" stroke="#427b62" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M96 42v17M87.5 50.5h17M336 174v12M330 180h12" stroke="#88aa94" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="61" cy="179" r="4" fill="#93b19c"/><circle cx="316" cy="46" r="3" fill="#93b19c"/>
+        </svg>
+        <span class="art-caption">PREPARE. PRACTICE. BE YOURSELF.</span>
+      </div>
+    </section>
+
+    <section class="progress-panel" aria-labelledby="progress-title">
+      <div class="progress-heading"><span class="progress-symbol" aria-hidden="true">✓</span><div><h2 id="progress-title">あなたの学習進捗</h2><p>一問ずつ、着実に。</p></div></div>
+      <div class="progress-meter"><div class="progress-numbers"><span><strong id="completed-count">0</strong><span id="total-count"> / 50 問</span></span><strong id="progress-percent">0<span>%</span></strong></div><div id="progress-bar" class="progress-track" role="progressbar" aria-label="回答できる質問の割合" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill"></div></div></div>
+      <div class="status-counts"><span><i class="status-dot ready"></i>回答できる <b id="ready-count">0</b></span><span><i class="status-dot practicing"></i>練習中 <b id="practicing-count">0</b></span><span><i class="status-dot unseen"></i>未着手 <b id="unseen-count">50</b></span></div>
+    </section>
+
+    <div class="study-layout">
+      <aside class="sidebar" aria-label="カテゴリから選ぶ">
+        <div class="sidebar-title">カテゴリ <span id="sidebar-category-count">8</span></div>
+        <nav id="category-nav" class="category-nav" aria-label="質問カテゴリ"></nav>
+        <div class="practice-tip"><span class="tip-icon" aria-hidden="true">✦</span><h3>まずは、自分の言葉で。</h3><p>回答例を見る前に、一度声に出して答えてみよう。上手に話すことより、伝えたいことを大切に。</p></div>
+      </aside>
+
+      <section id="questions" class="questions-area" aria-labelledby="questions-title" tabindex="-1">
+        <div class="section-heading"><div><p class="eyebrow">QUESTION COLLECTION</p><h2 id="questions-title">想定質問一覧 <span id="visible-count">50問</span></h2></div><span class="section-hint">タップして練習する <span aria-hidden="true">↓</span></span></div>
+        <div class="filter-panel">
+          <div class="filter-top"><label class="search-field"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M16 16l5 5"/></svg><input id="search-input" type="search" placeholder="質問をキーワードで探す" aria-label="質問をキーワードで探す"></label><label class="category-select-label"><span class="sr-only">カテゴリ</span><select id="category-filter"><option value="all">すべてのカテゴリ</option></select></label></div>
+          <div class="filter-bottom"><fieldset class="importance-filter"><legend>重要度</legend><div><button type="button" data-importance="all" aria-pressed="true" class="filter-button selected">すべて</button><button type="button" data-importance="A" aria-pressed="false" class="filter-button"><span class="importance-letter a">A</span> 最優先</button><button type="button" data-importance="B" aria-pressed="false" class="filter-button"><span class="importance-letter b">B</span> 重要</button><button type="button" data-importance="C" aria-pressed="false" class="filter-button"><span class="importance-letter c">C</span> 確認</button></div></fieldset><button id="reset-filters" class="text-button" type="button" hidden>絞り込みを解除</button></div>
+        </div>
+        <p class="list-guide"><span aria-hidden="true">ⓘ</span> 回答例は、質問を開いたあとに確認できます。</p>
+        <div id="question-list" aria-busy="true"><div class="loading-state">質問を読み込んでいます…</div></div>
+        <div id="empty-state" class="empty-state" hidden><span aria-hidden="true">⌕</span><h3>該当する質問がありません</h3><p>キーワードや絞り込み条件を変えてみてください。</p><button id="empty-reset" type="button" class="secondary-button">すべての質問を表示</button></div>
+        <div id="error-state" class="empty-state" hidden><h3>質問データを読み込めませんでした</h3><p>接続を確認して、もう一度お試しください。ローカルではHTTPサーバーから開いてください。</p><button id="retry-load" type="button" class="secondary-button">再読み込み</button></div>
+        <div class="collection-end" id="collection-end" hidden><span aria-hidden="true">✦</span><p>一つ答えられるたびに、面接が少し近くなる。</p></div>
+      </section>
+    </div>
+    <div class="sample-notice"><span aria-hidden="true">ⓘ</span><p>現在はUI確認用のダミーデータです。質問・回答例は実際の選抜内容を示すものではありません。</p></div>
+  </main>
+  <footer class="site-footer"><span>専修大学 面接対策</span><p>非公式の学習ツール <span>·</span> 学習状況はこのブラウザに保存されます</p></footer>
+  <div id="save-notice" class="save-notice" role="status" aria-live="polite"></div>
+  <p id="filter-announcement" class="sr-only" role="status" aria-live="polite"></p>
+</body>
+</html>
