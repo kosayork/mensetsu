@@ -8,7 +8,8 @@
   <title>専修大学 面接対策</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./css/styles.css">
-  <script type="module" src="./js/app.js"></script>
+  <link rel="stylesheet" href="./css/universities.css">
+  <script type="module" src="./js/app.js?v=2"></script>
 </head>
 <body>
   <a class="skip-link" href="#questions">質問一覧へ移動</a>
@@ -16,19 +17,22 @@
     <div class="header-inner">
       <a class="brand" href="./" aria-label="専修大学 面接対策 ホーム">
         <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 6v14M3 4.5c3-1 6-.5 9 1.5 3-2 6-2.5 9-1.5v14c-3-1-6-.5-9 1.5-3-2-6-2.5-9-1.5z"/></svg></span>
-        <span>専修大学 <strong>面接対策</strong><small>ネットワーク情報学部 / 総合型選抜</small></span>
+        <span><span id="university-name">専修大学</span> <strong>面接対策</strong><small id="faculty-name">ネットワーク情報学部 / 総合型選抜</small></span>
       </a>
       <span class="sample-badge"><span></span>ダミーデータ版</span>
     </div>
   </header>
 
   <main class="page-shell">
+    <div id="university-tabs" class="university-tabs" role="tablist" aria-label="大学を選択"></div>
+    <div id="university-error" class="empty-state" hidden><h2>大学設定を読み込めませんでした</h2><p>接続を確認して、もう一度お試しください。</p><button id="retry-universities" class="secondary-button" type="button">再読み込み</button></div>
+    <div id="university-content" role="tabpanel" aria-label="選択した大学の練習">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
         <p class="eyebrow">一問ずつ、あなたのペースで。</p>
         <h1 id="hero-title">自分の言葉で、<br>伝えられる自信を。</h1>
         <p class="hero-description">想定質問を知り、声に出して練習する。<br>あなたらしい答えを、少しずつ育てていこう。</p>
-        <button id="start-practice" class="primary-button" disabled>今日の練習をはじめる <span aria-hidden="true">↗</span></button>
+        <button id="start-practice" class="primary-button" disabled><span id="start-practice-label">今日の練習をはじめる</span> <span aria-hidden="true">↗</span></button>
         <p class="hero-meta"><span id="hero-category-count">8</span>カテゴリ <span class="meta-dot">·</span> <span id="hero-question-count">50</span>問の想定質問</p>
       </div>
       <div class="hero-art" aria-hidden="true">
@@ -45,6 +49,36 @@
       </div>
     </section>
 
+    <div id="mode-tabs" class="mode-tabs" role="tablist" aria-label="練習モード" hidden>
+      <button id="presentation-tab" class="mode-tab" type="button" role="tab" aria-selected="false" aria-controls="presentation-panel" tabindex="-1" data-mode="presentation"><strong>PRESENTATION</strong><span>5分間プレゼンの原稿と練習</span></button>
+      <button id="interview-tab" class="mode-tab" type="button" role="tab" aria-selected="true" aria-controls="interview-panel" data-mode="interview"><strong>INTERVIEW</strong><span>想定質問と回答練習</span></button>
+    </div>
+
+    <section id="presentation-panel" class="presentation-panel" role="tabpanel" aria-labelledby="presentation-tab" tabindex="-1" hidden>
+      <div id="presentation-loading" class="loading-state">プレゼン原稿を読み込んでいます…</div>
+      <div id="presentation-error" class="empty-state" hidden><h3>プレゼン原稿を読み込めませんでした</h3><p>接続を確認して、もう一度お試しください。</p><button id="retry-presentation" type="button" class="secondary-button">再読み込み</button></div>
+      <div id="presentation-content" hidden>
+        <div class="presentation-heading"><p class="eyebrow">PRESENTATION PRACTICE</p><h2 id="presentation-title">5分間プレゼンの練習</h2><p id="presentation-sample" class="presentation-sample" hidden>表示確認用のダミー原稿です。実際の提案シートに合わせて差し替えてください。</p></div>
+        <div class="presentation-layout">
+          <aside class="timer-card" aria-label="プレゼン練習タイマー">
+            <h3>練習タイマー</h3><p class="timer-duration" id="timer-duration">制限時間 5分</p>
+            <div id="timer-display" class="timer-display" role="timer" aria-label="残り時間">05:00</div>
+            <p id="timer-status" class="timer-status" role="status" aria-live="polite">開始ボタンで練習をはじめよう</p>
+            <button id="timer-start" class="primary-button" type="button">開始</button>
+            <div class="timer-actions"><button id="timer-pause" class="secondary-button" type="button" disabled>一時停止</button><button id="timer-reset" class="secondary-button" type="button">リセット</button></div>
+            <p class="timer-caption">大学を切り替えるとリセットされます。INTERVIEWへ移ると一時停止します。</p>
+          </aside>
+          <section class="script-card" aria-labelledby="script-heading">
+            <div class="script-heading"><h3 id="script-heading">プレゼン原稿</h3><button id="script-toggle" type="button" class="secondary-button" aria-expanded="true" aria-controls="presentation-script">原稿を隠す</button></div>
+            <div id="presentation-script"></div>
+            <p id="script-hidden-notice" class="script-hidden-notice" hidden>原稿を隠しています。提案シートを見ながら、自分の言葉で話してみましょう。</p>
+          </section>
+        </div>
+        <div class="presentation-advice"><section class="practice-tip"><h3>プレゼンのポイント</h3><ul id="presentation-points" class="point-list"></ul></section><section class="practice-tip"><h3>注意事項</h3><ul id="presentation-cautions" class="followup-list"></ul></section></div>
+      </div>
+    </section>
+
+    <div id="interview-panel">
     <section class="progress-panel" aria-labelledby="progress-title">
       <div class="progress-heading"><span class="progress-symbol" aria-hidden="true">✓</span><div><h2 id="progress-title">あなたの学習進捗</h2><p>一問ずつ、着実に。</p></div></div>
       <div class="progress-meter"><div class="progress-numbers"><span><strong id="completed-count">0</strong><span id="total-count"> / 50 問</span></span><strong id="progress-percent">0<span>%</span></strong></div><div id="progress-bar" class="progress-track" role="progressbar" aria-label="回答できる質問の割合" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill"></div></div></div>
@@ -72,8 +106,10 @@
       </section>
     </div>
     <div class="sample-notice"><span aria-hidden="true">ⓘ</span><p>現在はUI確認用のダミーデータです。質問・回答例は実際の選抜内容を示すものではありません。</p></div>
+    </div>
+    </div>
   </main>
-  <footer class="site-footer"><span>専修大学 面接対策</span><p>非公式の学習ツール <span>·</span> 学習状況はこのブラウザに保存されます</p></footer>
+  <footer class="site-footer"><span id="footer-title">専修大学 面接対策</span><p>非公式の学習ツール <span>·</span> 学習状況はこのブラウザに保存されます</p></footer>
   <div id="save-notice" class="save-notice" role="status" aria-live="polite"></div>
   <p id="filter-announcement" class="sr-only" role="status" aria-live="polite"></p>
 </body>

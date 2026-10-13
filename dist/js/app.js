@@ -1,12 +1,18 @@
-import { STATUS, loadQuestions, filterQuestions } from './data.js';
-import { LearningStore, STORAGE_KEY } from './storage.js';
+import { STATUS, loadQuestions, filterQuestions, loadUniversities, loadPresentation } from './data.js?v=2';
+import { LearningStore, getLearningStorageKey, getSelectedUniversity, saveSelectedUniversity } from './storage.js?v=2';
+import { PresentationPractice } from './presentation.js';
 
 const $ = selector => document.querySelector(selector);
-const state = { data: null, filters: { category: 'all', importance: 'all', search: '' }, openIds: new Set(), revealedIds: new Set() };
+const state = { university: null, universities: [], mode: 'interview', data: null, presentation: null, filters: { category: 'all', importance: 'all', search: '' }, openIds: new Set(), revealedIds: new Set() };
+const dataDirectory = new URL('../data/', import.meta.url);
+const stores = new Map();
+let storage;
+try { storage = window.localStorage; }
+catch { storage = { getItem: () => { throw new Error('Storage unavailable'); }, setItem: () => { throw new Error('Storage unavailable'); } }; }
 let store;
-try { store = new LearningStore(); }
-catch { store = new LearningStore({ getItem: () => { throw new Error('Storage unavailable'); }, setItem: () => { throw new Error('Storage unavailable'); } }); }
 let noticeTimeout;
+let loadToken = 0;
+const presentationPractice = new PresentationPractice(element, showNotice);
 
 // JSON content is always inserted as text, including user-provided replacement data.
 function element(tag, className, text) {
@@ -25,7 +31,7 @@ function showNotice(message, error = false) {
 }
 
 function renderProgress() {
-  const progress = store.getProgress(state.data.questions);
+  const progress = store.getProgress(state.data?.questions || []);
   $('#completed-count').textContent = progress.ready;
   $('#total-count').textContent = ` / ${progress.total} 問`;
   $('#progress-percent').replaceChildren(document.createTextNode(String(progress.percent)), element('span', '', '%'));
@@ -186,34 +192,195 @@ function resetFilters() {
   state.filters = { category: 'all', importance: 'all', search: '' };
   $('#search-input').value = '';
   $('#category-filter').value = 'all';
-  renderList();
+  if (state.data) renderList();
 }
 
-async function init() {
+function updatePracticeButton() {
+  const presenting = state.mode === 'presentation';
+  $('#start-practice-label').textContent = presenting ? 'プレゼン練習をはじめる' : '今日の練習をはじめる';
+  $('#start-practice').disabled = presenting ? !state.presentation : !state.data?.questions.length;
+  $('.sample-badge').hidden = presenting ? !state.presentation?.isDummy : !state.data || state.data.isDummy === false;
+}
+
+function selectMode(mode) {
+  state.mode = mode;
+  const presenting = mode === 'presentation';
+  if (!presenting) presentationPractice.pause();
+  $('#presentation-panel').hidden = !presenting;
+  $('#interview-panel').hidden = presenting;
+  document.querySelectorAll('[data-mode]').forEach(button => {
+    const selected = button.dataset.mode === mode;
+    button.setAttribute('aria-selected', String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  });
+  $('.skip-link').href = presenting ? '#presentation-panel' : '#questions';
+  $('.skip-link').textContent = presenting ? 'プレゼン練習へ移動' : '質問一覧へ移動';
+  updatePracticeButton();
+}
+
+function selectUniversity(university) {
+  if (university.id === state.university?.id) return;
+  presentationPractice.reset();
+  state.university = university;
+  if (!stores.has(university.id)) stores.set(university.id, new LearningStore(storage, getLearningStorageKey(university)));
+  store = stores.get(university.id);
+  if (store.available) store.load();
+  if (!saveSelectedUniversity(storage, university.id)) showNotice('大学の選択を保存できませんでした。この画面内でのみ切り替わります。', true);
+  const title = `${university.name} 面接対策`;
+  document.title = title;
+  $('#university-name').textContent = university.name;
+  $('#faculty-name').textContent = `${university.faculty} / ${university.selectionLabel || '総合型選抜'}`;
+  $('#footer-title').textContent = title;
+  $('.brand').setAttribute('aria-label', `${title} ホーム`);
+  $('meta[name="description"]').content = `${university.name}${university.faculty}の面接練習ツール。自分の言葉で答える練習をしよう。`;
+  document.querySelectorAll('[data-university]').forEach(button => {
+    const selected = button.dataset.university === university.id;
+    button.setAttribute('aria-selected', String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  });
+  $('#university-content').setAttribute('aria-labelledby', `university-tab-${university.id}`);
+  $('#mode-tabs').hidden = !university.presentationFile;
+  if (university.presentationFile) {
+    $('#interview-panel').setAttribute('role', 'tabpanel');
+    $('#interview-panel').setAttribute('aria-labelledby', 'interview-tab');
+  } else {
+    $('#interview-panel').removeAttribute('role');
+    $('#interview-panel').removeAttribute('aria-labelledby');
+  }
+  state.filters = { category: 'all', importance: 'all', search: '' };
+  state.openIds.clear();
+  state.revealedIds.clear();
+  $('#search-input').value = '';
+  init(university.presentationFile ? 'presentation' : 'interview');
+}
+
+// Roving tabindex and arrow keys apply to both kinds of tabs.
+function enableTabKeyboard(container) {
+  container.addEventListener('keydown', event => {
+    const buttons = [...container.querySelectorAll('[role="tab"]')];
+    const index = buttons.indexOf(document.activeElement);
+    if (index < 0) return;
+    const offsets = { ArrowRight: 1, ArrowLeft: -1 };
+    let next;
+    if (event.key in offsets) next = (index + offsets[event.key] + buttons.length) % buttons.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = buttons.length - 1;
+    else return;
+    event.preventDefault();
+    buttons[next].focus();
+    buttons[next].click();
+  });
+}
+
+async function boot() {
+  $('#university-error').hidden = true;
+  try {
+    const config = await loadUniversities();
+    state.universities = config.universities;
+    const tabs = $('#university-tabs');
+    tabs.replaceChildren();
+    state.universities.forEach(university => {
+      const button = element('button', 'university-tab');
+      button.type = 'button';
+      button.id = `university-tab-${university.id}`;
+      button.dataset.university = university.id;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-controls', 'university-content');
+      button.append(element('strong', '', university.name), element('small', '', university.faculty));
+      button.addEventListener('click', () => selectUniversity(university));
+      tabs.append(button);
+    });
+    const selectedId = getSelectedUniversity(storage, config.defaultUniversityId);
+    selectUniversity(state.universities.find(university => university.id === selectedId)
+      || state.universities.find(university => university.id === config.defaultUniversityId));
+    $('#university-content').hidden = false;
+  } catch (error) {
+    $('#university-content').hidden = true;
+    $('#university-error').hidden = false;
+    console.error('大学設定の読み込みに失敗しました:', error);
+  }
+}
+
+async function init(mode = state.mode) {
+  const token = ++loadToken;
+  const university = state.university;
+  state.data = null;
+  state.presentation = null;
+  presentationPractice.reset();
+  selectMode(mode);
+  renderProgress();
+  $('#category-nav').replaceChildren();
+  $('#category-filter').replaceChildren(element('option', '', 'すべてのカテゴリ'));
+  $('#category-filter').firstElementChild.value = 'all';
+  $('#hero-category-count').textContent = '—';
+  $('#hero-question-count').textContent = '—';
+  $('#sidebar-category-count').textContent = '—';
+  $('#visible-count').textContent = '—';
+  $('#empty-state').hidden = true;
+  $('#collection-end').hidden = true;
+  $('.sample-notice').hidden = true;
   $('#question-list').setAttribute('aria-busy', 'true');
   $('#error-state').hidden = true;
   $('#question-list').replaceChildren(element('div', 'loading-state', '質問を読み込んでいます…'));
-  try {
-    state.data = await loadQuestions();
+  const questionTask = (async () => {
+   try {
+    const data = await loadQuestions(new URL(university.questionsFile, dataDirectory));
+    if (token !== loadToken) return;
+    state.data = data;
     $('#hero-category-count').textContent = state.data.categories.length;
     $('#sidebar-category-count').textContent = state.data.categories.length;
     $('#hero-question-count').textContent = state.data.questions.length;
     const isDummy = state.data.isDummy !== false;
-    $('.sample-badge').hidden = !isDummy;
     $('.sample-notice').hidden = !isDummy;
     renderCategoryNav();
     renderProgress();
     renderList();
-    $('#start-practice').disabled = state.data.questions.length === 0;
+    if (!state.data.questions.length) {
+      $('#empty-state h3').textContent = '質問データは準備中です';
+      $('#empty-state p').textContent = '質問が追加されると、ここに一覧が表示されます。';
+      $('#empty-reset').hidden = true;
+    } else {
+      $('#empty-state h3').textContent = '該当する質問がありません';
+      $('#empty-state p').textContent = 'キーワードや絞り込み条件を変えてみてください。';
+      $('#empty-reset').hidden = false;
+    }
+    $('#interview-tab span').textContent = `想定質問${data.questions.length}問と回答練習`;
     if (!store.available) showNotice('学習状況を読み込めませんでした。保存設定をご確認ください。', true);
   } catch (error) {
+    if (token !== loadToken) return;
     $('#question-list').replaceChildren();
     $('#error-state').hidden = false;
-    $('#start-practice').disabled = true;
+    $('#error-state h3').textContent = `${university.name}の質問データを読み込めませんでした`;
     console.error('質問の読み込みに失敗しました:', error);
   } finally {
-    $('#question-list').setAttribute('aria-busy', 'false');
+    if (token === loadToken) {
+      $('#question-list').setAttribute('aria-busy', 'false');
+      updatePracticeButton();
+    }
   }
+  })();
+  const presentationTask = (async () => {
+    if (!university.presentationFile) return;
+    $('#presentation-loading').hidden = false;
+    $('#presentation-panel').setAttribute('aria-busy', 'true');
+    try {
+      const data = await loadPresentation(new URL(university.presentationFile, dataDirectory));
+      if (token !== loadToken) return;
+      state.presentation = data;
+      presentationPractice.render(data);
+    } catch (error) {
+      if (token !== loadToken) return;
+      $('#presentation-error').hidden = false;
+      console.error('プレゼン原稿の読み込みに失敗しました:', error);
+    } finally {
+      if (token === loadToken) {
+        $('#presentation-loading').hidden = true;
+        $('#presentation-panel').setAttribute('aria-busy', 'false');
+        updatePracticeButton();
+      }
+    }
+  })();
+  await Promise.allSettled([questionTask, presentationTask]);
 }
 
 $('#category-filter').addEventListener('change', event => { if (state.data) setCategory(event.target.value); });
@@ -227,8 +394,20 @@ document.querySelectorAll('[data-importance]').forEach(button => button.addEvent
 }));
 $('#reset-filters').addEventListener('click', resetFilters);
 $('#empty-reset').addEventListener('click', resetFilters);
-$('#retry-load').addEventListener('click', init);
+$('#retry-load').addEventListener('click', () => init());
+$('#retry-presentation').addEventListener('click', () => init());
+$('#retry-universities').addEventListener('click', boot);
+document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => selectMode(button.dataset.mode)));
+enableTabKeyboard($('#university-tabs'));
+enableTabKeyboard($('#mode-tabs'));
 $('#start-practice').addEventListener('click', () => {
+  if (state.mode === 'presentation') {
+    if (!state.presentation) return;
+    presentationPractice.start();
+    $('#timer-start').focus({ preventScroll: true });
+    $('#presentation-panel').scrollIntoView({ behavior: 'instant', block: 'start' });
+    return;
+  }
   if (!state.data?.questions.length) return;
   resetFilters();
   const questions = state.data.questions;
@@ -241,9 +420,10 @@ $('#start-practice').addEventListener('click', () => {
   card.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
 });
 window.addEventListener('storage', event => {
-  if ((event.key === STORAGE_KEY || event.key === null) && state.data) {
-    store.records = Object.create(null);
-    store.load();
+  for (const item of stores.values()) {
+    if (event.key === item.key || event.key === null) item.load();
+  }
+  if (store && (event.key === store.key || event.key === null) && state.data) {
     renderProgress();
     document.querySelectorAll('.question-card').forEach(card => {
       const question = state.data.questions.find(question => question.id === card.dataset.questionId);
@@ -251,4 +431,4 @@ window.addEventListener('storage', event => {
     });
   }
 });
-init();
+boot();

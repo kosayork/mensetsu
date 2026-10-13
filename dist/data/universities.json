@@ -1,0 +1,21 @@
+{
+  "defaultUniversityId": "senshu",
+  "universities": [
+    {
+      "id": "senshu",
+      "name": "専修大学",
+      "faculty": "ネットワーク情報学部",
+      "selectionLabel": "総合型選抜",
+      "questionsFile": "senshu.json",
+      "storageKey": "senshu-interview:learning:v1"
+    },
+    {
+      "id": "kokugakuin",
+      "name": "國學院大學",
+      "faculty": "観光まちづくり学部",
+      "selectionLabel": "総合型選抜",
+      "questionsFile": "kokugakuin.json",
+      "presentationFile": "kokugakuin-presentation.json"
+    }
+  ]
+}
