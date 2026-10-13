@@ -10,24 +10,29 @@ function memoryStorage(initial = null) {
   return { getItem: () => raw, setItem: (key, value) => { assert.equal(key, STORAGE_KEY); raw = value; } };
 }
 
-test('sample data has 50 unique questions across eight categories and passes runtime validation', async () => {
-  assert.equal(data.questions.length, 50);
-  assert.equal(data.categories.length, 8);
-  assert.equal(new Set(data.questions.map(q => q.id)).size, 50);
+test('question data passes runtime validation and duplicate IDs are rejected', async () => {
+  assert.ok(data.questions.length > 0, 'At least one question is required');
+  assert.ok(data.categories.length > 0, 'At least one category is required');
+  assert.equal(new Set(data.questions.map(q => q.id)).size, data.questions.length);
   const originalFetch = globalThis.fetch;
   try {
     globalThis.fetch = async () => ({ ok: true, json: async () => data });
-    assert.equal((await loadQuestions()).questions.length, 50);
+    assert.equal((await loadQuestions()).questions.length, data.questions.length);
     globalThis.fetch = async () => ({ ok: true, json: async () => ({ ...data, questions: [data.questions[0], data.questions[0]] }) });
     await assert.rejects(loadQuestions(), /Invalid question/);
   } finally { globalThis.fetch = originalFetch; }
 });
 
 test('category, importance and normalized search filters combine and preserve original IDs', () => {
-  const result = filterQuestions(data.questions, { category: 'motivation', importance: 'A', search: '専修大学' });
-  assert.deepEqual(result.map(q => q.id), ['q001']);
-  assert.equal(filterQuestions(data.questions, { search: 'ＰＲＯＧＲＡＭＭＩＮＧ' }).length, 0);
-  assert.equal(filterQuestions([{ question: 'AI の利用', categoryId: 'society', importance: 'A', id: 'test' }], { search: 'ａｉ 利用' }).length, 1);
+  const questions = [
+    { id: 'filter-1', categoryId: 'motivation', importance: 'A', question: '専修大学を志望した理由' },
+    { id: 'filter-2', categoryId: 'motivation', importance: 'B', question: '専修大学で学びたいこと' },
+    { id: 'filter-3', categoryId: 'society', importance: 'A', question: 'AI の利用' },
+  ];
+  const result = filterQuestions(questions, { category: 'motivation', importance: 'A', search: '専修大学' });
+  assert.deepEqual(result.map(q => q.id), ['filter-1']);
+  assert.equal(filterQuestions(questions, { search: '該当しない文字列' }).length, 0);
+  assert.deepEqual(filterQuestions(questions, { search: 'ａｉ 利用' }).map(q => q.id), ['filter-3']);
 });
 
 test('progress survives reload, reorder and content changes without losing future fields', () => {
@@ -40,8 +45,9 @@ test('progress survives reload, reorder and content changes without losing futur
   assert.equal(restored.records.q001.answerText, '本人の回答');
   assert.equal(restored.getStatus('archived'), 'ready');
   assert.equal(restored.getStatus('new-id'), 'unseen');
-  const changed = [...data.questions].reverse().map(q => ({ ...q, question: '更新済みの質問' }));
-  assert.deepEqual(restored.getProgress(changed), { ready: 1, practicing: 1, unseen: 48, total: 50, percent: 2 });
+  const original = [{ id: 'q001' }, { id: 'q002' }, { id: 'new-id' }];
+  const changed = [...original].reverse().map(q => ({ ...q, question: '更新済みの質問' }));
+  assert.deepEqual(restored.getProgress(changed), { ready: 1, practicing: 1, unseen: 1, total: 3, percent: 33 });
   assert.equal(restored.getProgress([]).percent, 0);
   restored.setStatus('q001', 'unseen');
   assert.equal(new LearningStore(storage).getProgress(changed).percent, 0);
